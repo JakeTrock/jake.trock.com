@@ -1,3 +1,17 @@
+@font-face {
+  font-family: 'CallFourL';
+  src: url('call_four_l_reg.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'CallFourLItalic';
+  src: url('call_four_l_ital.ttf') format('truetype');
+  font-weight: normal;
+  font-style: italic;
+}
+
 body {
   background-image: url("../logo/95.jpg");
   background-repeat: repeat;
@@ -8,6 +22,7 @@ body {
 .header {
   background-color: #90a984;
   padding: 10px;
+  font-family: 'CallFourL', monospace;
 }
 
 .nav-link {
@@ -95,6 +110,11 @@ body {
   margin: 0 auto;
 }
 
+.tagline {
+  font-family: 'CallFourLItalic', monospace;
+  font-style: italic;
+}
+
 .marquee-floater {
   background-color: #f5f5f5;
   border-radius: 25px;
@@ -107,6 +127,7 @@ body {
     inset 0 -3px 5px rgba(0, 0, 0, 0.1),
     inset 0 3px 5px rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.3);
+  font-family: 'CallFourL', monospace;
 }
 
 .swaying-text {
