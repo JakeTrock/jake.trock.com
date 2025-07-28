@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="logo/logo.png" type="image/png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jacob Trock's Site</title>
+    <script
+      src="https://unpkg.com/cursor-effects@latest/dist/browser.js"
+      defer
+    ></script>
+    <script>
+      window.addEventListener("load", (e) => {
+        new cursoreffects.bubbleCursor();
+      });
+    </script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.14.0/devicon.min.css"
+      defer
+    />
+    <link 
+      rel="stylesheet" 
+      href="main.css"
+      media="print" 
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="styles/main.css">
+    </noscript>
+  </head>
+  <body>
+    <header class="header">[ Jacob Trock's Site ]</header>
+
+    <marquee>
+      <p class="marquee-floater text-vertical-lerp">Hello there...</p>
+    </marquee>
+
+    <main class="content">
+      <div class="profile-card">
+        <div class="logo">
+          <img src="logo/jake.svg" style="width: 10em" alt="Logo" />
+        </div>
+        <h2 class="tagline">Jacob Trock</h2>
+        <p>Your friendly neighborhood coder.</p>
+        <div class="social-links">
+          <a
+            class="social-link swaying-text devicon-github-original"
+            href="https://github.com/jaketrock"
+          ></a>
+          <a
+            class="social-link swaying-text devicon-google-plain"
+            href="mailto:jaketrockinquiry@geocrypt.me"
+          ></a>
+          <a
+            class="social-link swaying-text devicon-linkedin-plain"
+            href="https://www.linkedin.com/in/jake-trock/"
+          ></a>
+        </div>
+        <hr />
+      </div>
+
+      <div class="body-card">
+        
+        <p>
+          <b>I'm Jacob Trock</b>, a graduate of Northeastern
+          University, with a degree in computer science and in business, and am currently working on a stealth YC company. 
+          In my free time, I enjoy helping people recover
+          old tapes, improve their health, and fix their electronics.
+        </p>
+
+        <blockquote class="quote">
+          <p>
+            No graphical user interface on a simulation can ever compete with
+            the human imagination – Ken Thompson
+          </p>
+        </blockquote>
+
+        <p>Feel free to reach out. I enjoy a good conversation.</p>
+
+        <div class="resume-links">
+          <a href="./resume/resume.pdf" class="resume-button swaying-text tagline">Resume &lt;pdf&gt;</a>
+          <a href="./resume/resume.docx" class="resume-button swaying-text tagline">Resume &lt;docx&gt;</a>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      © <span id="current-year"></span>
+      <a href="#" class="nav-link">Jacob Trock</a>
+    </footer>
+    <script>
+      // Get the current year
+      const currentYear = new Date().getFullYear();
+      // Set the current year in the span with id "current-year"
+      document.getElementById("current-year").textContent = currentYear;
+    </script>
+  </body>
+</html>
