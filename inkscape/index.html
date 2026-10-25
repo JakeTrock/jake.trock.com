@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inkscape Web — Inkscape 1.4.4 in WebAssembly (WASM)</title>
+<meta name="description" content="Inkscape Web: run Inkscape 1.4.4 directly in your browser via WebAssembly (WASM). Full desktop SVG and vector graphics editor ported with Emscripten and GTK3 Broadway.">
+<meta name="keywords" content="inkscape web, inkscape wasm, inkscape webassembly, inkscape online, inkscape in browser, vector graphics editor, svg editor">
+<meta name="author" content="Jacob Trock">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://jake.trock.com/inkscape/">
+<link rel="icon" href="../logo/logo.png" type="image/png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Inkscape Web — Inkscape 1.4.4 in WebAssembly">
+<meta property="og:description" content="Run Inkscape 1.4.4 directly in your browser via WebAssembly (WASM). Full desktop SVG and vector graphics editor.">
+<meta property="og:url" content="https://jake.trock.com/inkscape/">
+<meta property="og:site_name" content="Jacob Trock's Site">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Inkscape Web — Inkscape 1.4.4 in WebAssembly">
+<meta name="twitter:description" content="Run Inkscape 1.4.4 directly in your browser via WebAssembly (WASM). Full desktop SVG and vector graphics editor.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Inkscape Web",
+  "alternateName": ["Inkscape WASM", "Inkscape WebAssembly"],
+  "url": "https://jake.trock.com/inkscape/",
+  "description": "Inkscape 1.4.4 vector graphics and SVG editor ported to WebAssembly (Emscripten + GTK3 Broadway) running directly in the browser.",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Web Browser",
+  "softwareVersion": "1.4.4",
+  "isBasedOn": "https://github.com/JakeTrock/inkscape-wasm",
+  "author": {
+    "@type": "Person",
+    "name": "Jacob Trock",
+    "url": "https://jake.trock.com/"
+  }
+}
+</script>
+<style type="text/css">
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+               background: #2b2b2b; }
+  body > canvas { z-index: 1; margin: 0; }
+</style>
+<script type="text/javascript" src="inkscape.js?v=ccb9373a4801"></script>
+<script type="text/javascript" src="rawinflate.min.js?v=ccb9373a4801"></script>
+<script type="text/javascript" src="bridge.js?v=ccb9373a4801"></script>
+<script type="text/javascript" src="broadway.js?v=ccb9373a4801"></script>
+</head>
+<body>
+<div style="position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden">
+  <button id="btn-open">Open SVG</button>
+  <button id="btn-save">Save</button>
+  <button id="btn-export">Export PNG</button>
+  <button id="btn-reload">Hard reload</button>
+  <span id="status">booting…</span>
+  <input id="file-input" type="file" accept=".svg,.png,.jpg,.jpeg,.webp,.gif,.bmp,image/*" multiple hidden>
+  <span class="stage" id="stage-module">·</span>
+  <span class="stage" id="stage-runtime">·</span>
+  <span class="stage" id="stage-broadway">·</span>
+  <span class="stage" id="stage-window">·</span>
+  <span class="stage" id="stage-frame">·</span>
+  <div id="broadway"></div>
+  <div id="console"></div>
+</div>
+<script type="module" src="loader.js?v=ccb9373a4801"></script>
+</body>
+</html>
