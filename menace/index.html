@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MENACE — Matchbox Educable Noughts and Crosses Engine (1961)</title>
+  <style>
+    :root {
+      --bg: #f4f2ec;
+      --surface: #ffffff;
+      --well: #eae7de;
+      --border: #d2cfc4;
+      --border-strong: #9e9a8e;
+      --ink: #181816;
+      --muted: #66635b;
+      --orange: #d9481e; /* Braun signal orange: MENACE (X) & active nudge */
+      --blue: #1b5683;   /* Instrument blue: Human (O) */
+      --green: #1e7242;  /* Positive reinforcement */
+      --red: #b93125;    /* Negative reinforcement */
+      --amber: #b87314;  /* Selected bead / Rewind state */
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+      max-width: 1280px;
+      margin-inline: auto;
+    }
+    /* Header & Instrument Readouts */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--ink);
+      margin-bottom: 16px;
+    }
+    .brand-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .intro {
+      margin: 4px 0 0 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+      max-width: 68ch;
+    }
+    .readouts {
+      display: flex;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .readout {
+      background: var(--surface);
+      padding: 8px 14px;
+      min-width: 86px;
+    }
+    .readout-label {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .readout-val {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Guided 3-Step Protocol Strip */
+    .guide-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 860px) {
+      .guide-grid { grid-template-columns: 1fr; }
+    }
+    .guide-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--border);
+      border-radius: 4px;
+      padding: 12px 14px;
+      transition: border-color 0.15s, background-color 0.15s;
+    }
+    .guide-step.active {
+      border-color: var(--border-strong);
+      border-top-color: var(--orange);
+      background: #fffdf9;
+    }
+    .guide-step.done {
+      border-top-color: var(--green);
+      opacity: 0.82;
+    }
+    .guide-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .guide-step.active .guide-num { color: var(--orange); }
+    .guide-step.done .guide-num { color: var(--green); }
+    .guide-body {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin: 0;
+    }
+    .guide-body b { color: var(--ink); }
+
+    /* Tape Transport / Timeline Bar */
+    .transport {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .transport-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .transport-label {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-right: 4px;
+    }
+    input[type="range"] {
+      flex: 1;
+      min-width: 160px;
+      accent-color: var(--orange);
+      cursor: pointer;
+    }
+    .status-pill {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 3px;
+      background: var(--well);
+      color: var(--ink);
+      border: 1px solid var(--border);
+    }
+    .status-pill.rewound {
+      background: #fef3c7;
+      border-color: var(--amber);
+      color: #92400e;
+    }
+    .step-log {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--ink);
+      background: var(--well);
+      padding: 6px 10px;
+      border-radius: 3px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Tactile Pushbuttons */
+    button {
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--border-strong);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: background 0.1s, transform 0.05s;
+    }
+    button:hover:not(:disabled) { background: var(--well); }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:disabled { opacity: 0.38; cursor: not-allowed; }
+    button.signal {
+      background: var(--orange);
+      color: #ffffff;
+      border-color: #a63311;
+    }
+    button.signal:hover:not(:disabled) { background: #c23d16; }
+
+    /* Main Workspace Layout */
+    .workspace {
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px;
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .panel-title {
+      margin: 0;
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+    }
+    .panel-sub {
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    /* Dynamic Prompt Banner inside Board Panel */
+    .nudge-banner {
+      background: var(--well);
+      border-left: 3px solid var(--orange);
+      padding: 9px 11px;
+      font-size: 0.81rem;
+      margin-bottom: 12px;
+      border-radius: 0 3px 3px 0;
+    }
+    .nudge-banner b { color: var(--ink); }
+
+    /* 3x3 Playing Board */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+      background: var(--well);
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .cell {
+      aspect-ratio: 1;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 2.2rem;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 0;
+    }
+    .cell.X { color: var(--orange); }
+    .cell.O { color: var(--blue); }
+    .cell.win {
+      background: #ecfdf5;
+      border-color: var(--green);
+      border-width: 2px;
+    }
+    .cell .prob-hint {
+      position: absolute;
+      bottom: 4px;
+      right: 6px;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .cell .coord-hint {
+      position: absolute;
+      top: 3px;
+      left: 5px;
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      font-weight: 400;
+      color: #b5b1a6;
+    }
+
+    .controls-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .controls-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .controls-row button { flex: 1; }
+
+    /* How it Works Reference Note */
+    .mechanics-note {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .mechanics-note dl {
+      margin: 6px 0 0 0;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 10px;
+    }
+    .mechanics-note dt {
+      font-family: var(--mono);
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .mechanics-note dd { margin: 0; }
+
+    /* Matchbox Grids */
+    .legend-bar {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      padding: 8px 10px;
+      background: var(--well);
+      border-radius: 3px;
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .box-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+      gap: 10px;
+    }
+    .matchbox {
+      background: var(--well);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+    }
+    .matchbox.active {
+      border-color: var(--orange);
+      background: #fffaf7;
+    }
+    .matchbox-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 0.68rem;
+    }
+    .mini {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+    }
+    .mini-cell {
+      aspect-ratio: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.74rem;
+      font-weight: 600;
+    }
+    .mini-cell.X { color: var(--orange); background: #f9f8f5; }
+    .mini-cell.O { color: var(--blue); background: #f9f8f5; }
+    .mini-cell.bead { color: var(--ink); font-weight: 500; }
+    .mini-cell.zero { color: #c4c0b5; font-weight: 400; }
+    .mini-cell.picked {
+      border-color: var(--orange);
+      background: #fde8e1;
+      color: var(--orange);
+      font-weight: 700;
+    }
+    .delta-pos { color: var(--green); font-weight: 700; }
+    .delta-neg { color: var(--red); font-weight: 700; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="brand-label">Donald Michie · 1961 Mechanical Reinforcement Learner</div>
+      <h1>MENACE — Matchbox Educable Noughts &amp; Crosses Engine</h1>
+      <p class="intro">
+        Before digital reinforcement learning, Donald Michie built a tic-tac-toe computer from <b>304 matchboxes</b> and <b>colored glass beads</b>. Each box holds beads for every legal move; winning adds beads, losing removes them.
+      </p>
+    </div>
+    <div class="readouts" id="stats"></div>
+  </header>
+
+  <!-- 3-Step Guided Experiment Strip -->
+  <section class="guide-grid" aria-label="Guided Experiment">
+    <div class="guide-step" id="guide1">
+      <div class="guide-head">
+        <span class="guide-num">01 / Untrained Baseline</span>
+        <span id="guide1Status">Current</span>
+      </div>
+      <p class="guide-body">
+        At Game 0, every square in a matchbox starts with equal beads (<b>4 beads</b> on Turn 1). MENACE plays purely at random. <b>Play a game as O</b> and beat it—watch its chosen boxes lose a bead (<b>−1</b>).
+      </p>
+    </div>
+    <div class="guide-step" id="guide2">
+      <div class="guide-head">
+        <span class="guide-num">02 / Train 20 Games</span>
+        <span id="guide2Status">Next</span>
+      </div>
+      <p class="guide-body">
+        Click <b>Train 20 Games</b>. MENACE spars against a tactical partner that punishes blunders: winning trails gain <b>+3 beads</b>, draws gain <b>+1</b>, and losses lose <b>−1</b>.
+      </p>
+    </div>
+    <div class="guide-step" id="guide3">
+      <div class="guide-head">
+        <span class="guide-num">03 / Test &amp; Rewind</span>
+        <span id="guide3Status">Later</span>
+      </div>
+      <p class="guide-body">
+        <b>Play another game</b> against the trained engine and compare the bead counts inside its matchboxes. Use the <b>Timeline</b> below to rewind, replay, or branch from any past move.
+      </p>
+    </div>
+  </section>
+
+  <!-- Tape Transport / Rewind & Replay Bar -->
+  <section class="transport" aria-label="State Timeline and Replay">
+    <div class="transport-row">
+      <span class="transport-label">Timeline</span>
+      <button id="btnFirst" title="Rewind to very first step">⏮ Start</button>
+      <button id="btnPrev" title="Rewind one step">◀ Step Back</button>
+      <button id="btnReplay" title="Auto-replay forward from current position">▶ Replay</button>
+      <button id="btnNext" title="Advance one step">Step Fwd ▶</button>
+      <button id="btnLast" title="Jump to latest state">Latest ⏭</button>
+      <input type="range" id="slider" min="0" max="0" value="0" aria-label="Timeline step scrubber" />
+      <span id="modeBadge" class="status-pill">LIVE</span>
+    </div>
+    <div class="step-log">
+      <span id="stepDesc"></span>
+      <span id="stepCounter"></span>
+    </div>
+  </section>
+
+  <main class="workspace">
+    <!-- Left Column: Board & Controls -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Playing Board</h2>
+        <span class="panel-sub">MENACE = <b style="color:var(--orange)">X</b> · You = <b style="color:var(--blue)">O</b></span>
+      </div>
+
+      <div class="nudge-banner" id="nudgeBanner"></div>
+
+      <div class="board" id="board"></div>
+
+      <div class="controls-stack">
+        <div class="controls-row">
+          <button id="btnNew">New Game</button>
+          <button id="btnMenace" title="Let MENACE draw a bead when rewound to an X turn">Draw Bead (X)</button>
+        </div>
+        <div class="controls-row">
+          <button id="btnAuto1">Auto 1 Game</button>
+          <button id="btnAuto20">Train 20 Games</button>
+        </div>
+      </div>
+
+      <div class="mechanics-note">
+        <b>How to read the machine:</b>
+        <dl>
+          <dt>Boxes</dt>
+          <dd>Rotated/mirrored boards share 1 canonical matchbox so MENACE learns 8× faster.</dd>
+          <dt>Beads</dt>
+          <dd>Numbers in empty squares show bead counts. Higher count = higher probability of being drawn.</dd>
+          <dt>+3/+1/−1</dt>
+          <dd>After a game, every box opened in that game's trail has its chosen bead reinforced.</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Right Column: Internal Matchbox State -->
+    <section style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Current Game Matchboxes Opened (Trail)</h2>
+          <span class="panel-sub">Boxes opened by MENACE on Turns 1, 3, 5, 7</span>
+        </div>
+        <div class="legend-bar">
+          <span><span class="legend-dot" style="background:#fde8e1;border:1px solid var(--orange)"></span>Bead drawn this game</span>
+          <span><b>Number</b> = Beads in square (hover for %)</span>
+          <span><b>Σ</b> = Total beads in box</span>
+          <span><b class="delta-pos">+3 / +1</b> or <b class="delta-neg">−1</b> = Game-end reinforcement</span>
+        </div>
+        <div id="trailBoxes" class="box-grid"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title" id="allBoxesTitle">All Matchboxes in Memory</h2>
+          <span class="panel-sub">Canonical 3×3 board states sorted by turn ply</span>
+        </div>
+        <div id="allBoxes" class="box-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="menace.js?v=2"></script>
+  <script>
+    // shortcut: in-memory history array, sufficient for thousands of games in a browser session
+    const history = [];
+    let cursor = 0;
+    let replayTimer = null;
+    let userPlayedUntrained = false;
+    let trainedBatchUsed = false;
+
+    function pushState(nextState) {
+      stopReplay();
+      if (cursor < history.length - 1) {
+        history.splice(cursor + 1);
+      }
+      history.push(nextState);
+      cursor = history.length - 1;
+    }
+
+    function stopReplay() {
+      if (replayTimer) {
+        clearInterval(replayTimer);
+        replayTimer = null;
+      }
+    }
+
+    function toggleReplay() {
+      if (replayTimer) {
+        stopReplay();
+        render();
+        return;
+      }
+      if (cursor >= history.length - 1) cursor = 0;
+      render();
+      replayTimer = setInterval(() => {
+        if (cursor < history.length - 1) {
+          cursor++;
+          render();
+        } else {
+          stopReplay();
+          render();
+        }
+      }, 420);
+    }
+
+    function renderMiniBox(key, beads, pickedCell, labelRight, isActive, realMove) {
+      const total = beads.reduce((a, b) => a + b, 0);
+      const cells = [...key].map((ch, idx) => {
+        if (ch !== '.') return `<div class="mini-cell ${ch}">${ch}</div>`;
+        const b = beads[idx];
+        const pct = total ? Math.round((b / total) * 100) : 0;
+        const cls = idx === pickedCell
+          ? 'mini-cell picked'
+          : b === 0 ? 'mini-cell zero' : 'mini-cell bead';
+        return `<div class="${cls}" title="Canonical square ${idx + 1}: ${b} beads (${pct}% chance)">${b}</div>`;
+      }).join('');
+      const moveNote = typeof realMove === 'number' ? ` → Board #${realMove + 1}` : '';
+      return `
+        <div class="matchbox ${isActive ? 'active' : ''}">
+          <div class="matchbox-head">
+            <span title="Total beads in box">Σ=${total}${moveNote}</span>
+            <span>${labelRight || ''}</span>
+          </div>
+          <div class="mini">${cells}</div>
+        </div>
+      `;
+    }
+
+    function updateGuideAndNudge(s, isRewound) {
+      const g1 = document.getElementById('guide1');
+      const g2 = document.getElementById('guide2');
+      const g3 = document.getElementById('guide3');
+      const g1s = document.getElementById('guide1Status');
+      const g2s = document.getElementById('guide2Status');
+      const g3s = document.getElementById('guide3Status');
+      const banner = document.getElementById('nudgeBanner');
+      const btnNew = document.getElementById('btnNew');
+      const btnAuto20 = document.getElementById('btnAuto20');
+
+      g1.className = 'guide-step';
+      g2.className = 'guide-step';
+      g3.className = 'guide-step';
+      btnNew.className = '';
+      btnAuto20.className = '';
+
+      if (!userPlayedUntrained && s.stats.games === 0) {
+        g1.classList.add('active');
+        g1s.textContent = 'Step 1 · Active';
+        g2s.textContent = 'Up Next';
+        g3s.textContent = 'Later';
+        banner.innerHTML = `<b>Step 01 — Play Untrained MENACE:</b> Click any empty square on the board to place <b>O</b>. Notice in the <i>Trail</i> on the right that MENACE's opening matchbox had <b>4 beads</b> in every square (pure guesswork).`;
+      } else if (!trainedBatchUsed && s.stats.games < 20) {
+        g1.classList.add('done');
+        g2.classList.add('active');
+        g1s.textContent = '✓ Done';
+        g2s.textContent = 'Step 2 · Active';
+        g3s.textContent = 'Up Next';
+        btnAuto20.className = 'signal';
+        const outcomeMsg = s.result
+          ? (s.result.winner === 'O'
+            ? `You won! Notice how each box MENACE used just lost <b>1 bead (−1)</b> so it is less likely to repeat that mistake.`
+            : s.result.winner === 'X'
+              ? `MENACE got lucky and won! Each box it used gained <b>+3 beads</b>.`
+              : `A draw! Each box MENACE used gained <b>+1 bead</b>.`)
+          : `You're playing a nearly untrained MENACE.`;
+        banner.innerHTML = `${outcomeMsg} Next, click the orange <b>Train 20 Games</b> button below to rapidly train the matchboxes.`;
+      } else {
+        g1.classList.add('done');
+        g2.classList.add('done');
+        g3.classList.add('active');
+        g1s.textContent = '✓ Done';
+        g2s.textContent = '✓ Done';
+        g3s.textContent = 'Step 3 · Active';
+        if (isRewound) {
+          banner.innerHTML = `<b>Rewound to Step ${cursor}:</b> Inspect the exact bead counts at this moment in history. Click <b>▶ Replay</b> to watch forward, or click a board square to branch timeline from here.`;
+        } else if (s.result) {
+          btnNew.className = 'signal';
+          banner.innerHTML = `<b>Game #${s.stats.games} complete (${s.result.delta > 0 ? '+' + s.result.delta : s.result.delta} beads applied).</b> Click <b>New Game</b> to challenge the trained engine again, or drag the <b>Timeline</b> slider to rewind and replay.`;
+        } else {
+          banner.innerHTML = `<b>Step 03 — Playing Trained MENACE (${s.stats.games} games of experience):</b> Look at the opening matchbox on the right—favored moves now hold far more beads than weak ones. Click a square to play <b>O</b>!`;
+        }
+      }
+    }
+
+    function render() {
+      const s = history[cursor];
+      const isRewound = cursor < history.length - 1;
+
+      document.getElementById('stats').innerHTML = `
+        <div class="readout"><div class="readout-label">Games</div><div class="readout-val">${s.stats.games}</div></div>
+        <div class="readout"><div class="readout-label">MENACE (X)</div><div class="readout-val" style="color:var(--orange)">${s.stats.W}</div></div>
+        <div class="readout"><div class="readout-label">Draws</div><div class="readout-val">${s.stats.D}</div></div>
+        <div class="readout"><div class="readout-label">Human (O)</div><div class="readout-val" style="color:var(--blue)">${s.stats.L}</div></div>
+        <div class="readout"><div class="readout-label">Matchboxes</div><div class="readout-val">${Object.keys(s.boxes).length}</div></div>
+      `;
+
+      updateGuideAndNudge(s, isRewound);
+
+      const slider = document.getElementById('slider');
+      slider.max = history.length - 1;
+      slider.value = cursor;
+      document.getElementById('stepCounter').textContent = `STEP ${cursor} OF ${history.length - 1}`;
+      document.getElementById('stepDesc').textContent = s.desc;
+
+      const badge = document.getElementById('modeBadge');
+      badge.textContent = replayTimer ? 'REPLAYING' : isRewound ? 'REWOUND · HISTORY VIEW' : 'LIVE';
+      badge.className = isRewound || replayTimer ? 'status-pill rewound' : 'status-pill';
+
+      document.getElementById('btnFirst').disabled = cursor === 0;
+      document.getElementById('btnPrev').disabled = cursor === 0;
+      document.getElementById('btnNext').disabled = cursor >= history.length - 1;
+      document.getElementById('btnLast').disabled = cursor >= history.length - 1;
+      document.getElementById('btnReplay').textContent = replayTimer ? '⏸ Pause' : '▶ Replay';
+      document.getElementById('btnReplay').disabled = history.length <= 1;
+      document.getElementById('btnMenace').disabled = Boolean(s.result) || s.turn !== 'X';
+
+      // Map current canonical box beads onto the real board when rewound to X's turn
+      const { key: curKey, sym: curSym } = canonicalize(s.board);
+      const curBeads = s.boxes[curKey];
+
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+      for (let i = 0; i < 9; i++) {
+        const ch = s.board[i];
+        const btn = document.createElement('button');
+        const isWin = s.result && s.result.line.includes(i);
+        btn.className = `cell ${ch !== '.' ? ch : ''} ${isWin ? 'win' : ''}`;
+        btn.disabled = Boolean(s.result) || ch !== '.' || s.turn !== 'O';
+        const canonIdx = curSym.indexOf(i);
+        const beadHint = ch === '.' && s.turn === 'X' && curBeads
+          ? `<span class="prob-hint">${curBeads[canonIdx]}●</span>`
+          : '';
+        btn.innerHTML = `<span class="coord-hint">${i + 1}</span>${ch !== '.' ? ch : ''}${beadHint}`;
+        btn.onclick = () => {
+          const afterO = stepHuman(history[cursor], i);
+          pushState(afterO);
+          if (afterO.result) {
+            userPlayedUntrained = true;
+          } else {
+            const afterX = stepMenace(afterO);
+            pushState(afterX);
+            if (afterX.result) userPlayedUntrained = true;
+          }
+          render();
+        };
+        boardEl.appendChild(btn);
+      }
+
+      // Render Current Game Trail
+      const trailEl = document.getElementById('trailBoxes');
+      if (s.trail.length === 0) {
+        trailEl.innerHTML = `<div class="panel-sub">No matchboxes opened yet in this game.</div>`;
+      } else {
+        trailEl.innerHTML = s.trail.map(step => {
+          const deltaStr = step.delta > 0
+            ? `<span class="delta-pos">+${step.delta} beads</span>`
+            : step.delta < 0
+              ? `<span class="delta-neg">${step.delta} bead</span>`
+              : `Turn ${step.ply}`;
+          return renderMiniBox(step.key, s.boxes[step.key], step.canonMove, deltaStr, true, step.realMove);
+        }).join('');
+      }
+
+      // Render All Matchboxes sorted by ply then key
+      const trailMap = new Map(s.trail.map(t => [t.key, t.canonMove]));
+      const keys = Object.keys(s.boxes).sort((a, b) => {
+        const pa = [...a].filter(c => c !== '.').length;
+        const pb = [...b].filter(c => c !== '.').length;
+        return pa - pb || a.localeCompare(b);
+      });
+      document.getElementById('allBoxesTitle').textContent = `All Matchboxes in Memory (${keys.length})`;
+      document.getElementById('allBoxes').innerHTML = keys.map(k => {
+        const ply = [...k].filter(c => c !== '.').length;
+        const picked = trailMap.has(k) ? trailMap.get(k) : -1;
+        const isCurrent = !s.result && s.turn === 'X' && k === curKey;
+        return renderMiniBox(k, s.boxes[k], picked, `Ply ${ply}`, picked !== -1 || isCurrent);
+      }).join('');
+    }
+
+    function playOneAutoGame() {
+      let cur = history[cursor];
+      if (cur.result || cur.board !== '.........') {
+        cur = stepNewGame(cur);
+        pushState(cur);
+      }
+      while (!cur.result) {
+        if (cur.turn === 'X') {
+          cur = stepMenace(cur);
+        } else {
+          const move = typeof pickTrainerMove === 'function'
+            ? pickTrainerMove(cur.board)
+            : [...cur.board].map((c, i) => (c === '.' ? i : -1)).filter(i => i >= 0)[0];
+          cur = stepHuman(cur, move);
+        }
+        pushState(cur);
+      }
+    }
+
+    function playAutoGames(count) {
+      stopReplay();
+      if (count === 1) {
+        playOneAutoGame();
+        render();
+        return;
+      }
+      let remaining = count;
+      const btn20 = document.getElementById('btnAuto20');
+      btn20.disabled = true;
+      replayTimer = setInterval(() => {
+        playOneAutoGame();
+        remaining--;
+        if (remaining <= 0) {
+          stopReplay();
+          btn20.disabled = false;
+          trainedBatchUsed = true;
+          userPlayedUntrained = true;
+          const fresh = stepNewGame(history[cursor]);
+          pushState(fresh);
+          const ready = stepMenace(fresh);
+          ready.desc = `Trained ${count} games (${ready.stats.W}W / ${ready.stats.D}D / ${ready.stats.L}L) — New game started: MENACE played square ${ready.trail[0].realMove + 1}. Your turn (O).`;
+          pushState(ready);
+        }
+        render();
+      }, 40);
+    }
+
+    document.getElementById('btnFirst').onclick = () => { stopReplay(); cursor = 0; render(); };
+    document.getElementById('btnPrev').onclick = () => { stopReplay(); if (cursor > 0) cursor--; render(); };
+    document.getElementById('btnNext').onclick = () => { stopReplay(); if (cursor < history.length - 1) cursor++; render(); };
+    document.getElementById('btnLast').onclick = () => { stopReplay(); cursor = history.length - 1; render(); };
+    document.getElementById('btnReplay').onclick = toggleReplay;
+    document.getElementById('slider').oninput = (e) => { stopReplay(); cursor = Number(e.target.value); render(); };
+
+    document.getElementById('btnMenace').onclick = () => {
+      pushState(stepMenace(history[cursor]));
+      render();
+    };
+    document.getElementById('btnNew').onclick = () => {
+      const next = stepNewGame(history[cursor]);
+      pushState(next);
+      pushState(stepMenace(next));
+      render();
+    };
+    document.getElementById('btnAuto1').onclick = () => playAutoGames(1);
+    document.getElementById('btnAuto20').onclick = () => playAutoGames(20);
+
+    // Initialize with empty state + MENACE's opening move so user can play immediately or rewind to step 0
+    const s0 = createInitialState();
+    pushState(s0);
+    pushState(stepMenace(s0));
+    render();
+  </script>
+</body>
+</html>
