@@ -1,0 +1,20 @@
+fun.html
+  h_2ae8077fa5063a 1-123
+index.html
+  h_2ae8077fa5063a 10-28,37,41-45,48,50,53,61,71,74-75
+main.css
+  h_2ae8077fa5063a 20,24-75,79,83-104,106-127,140-233,235-236,240-247,252,259-269,289-294,296,361,408-430,432,434-436,439-441
+resume.html
+  h_2ae8077fa5063a 1-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fb829c762d506a40eae26c4bc40990ce966fde61",
+  "prompts": {},
+  "humans": {
+    "h_2ae8077fa5063a": {
+      "author": "Jacob Trock <jgh@geocrypt.me>"
+    }
+  }
+}
