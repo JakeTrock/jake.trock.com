@@ -6,14 +6,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Jacob Trock's personal site — home of Inkscape Web (Inkscape 1.4.4 in WebAssembly), Lingread, and Read4." />
     <title>Jacob Trock's Site</title>
-    <script
-      src="https://unpkg.com/cursor-effects@latest/dist/browser.js"
-      defer
-    ></script>
     <script>
-      window.addEventListener("load", (e) => {
-        new cursoreffects.bubbleCursor();
-      });
+      (() => {
+        let last = 0;
+        const spawn = (e) => {
+          const now = Date.now();
+          if (now - last < 35 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+          last = now;
+          const p = e.touches ? e.touches[0] : e;
+          if (!p || !document.body) return;
+          const el = document.createElement("i");
+          el.className = "pepper";
+          el.style.left = p.clientX + "px";
+          el.style.top = p.clientY + "px";
+          el.onanimationend = () => el.remove();
+          document.body.appendChild(el);
+        };
+        ["pointerdown", "pointermove", "touchmove"].forEach((ev) =>
+          window.addEventListener(ev, spawn, { passive: true })
+        );
+      })();
     </script>
     <link
       rel="stylesheet"
@@ -22,28 +34,23 @@
     />
     <link 
       rel="stylesheet" 
-      href="main.css"
-      media="print" 
-      onload="this.media='all'"
+      href="main.css?v=14"
     />
-    <noscript>
-      <link rel="stylesheet" href="styles/main.css">
-    </noscript>
   </head>
   <body>
-    <header class="header">[ Jacob Trock's Site ]</header>
-
-    <marquee>
-      <p class="marquee-floater text-vertical-lerp">Hello there...</p>
-    </marquee>
+    <header class="header">
+      <a href="./index.html"><img src="logo/logo.svg" class="header-logo" alt="Home" /></a>
+      <a href="./fun.html">Fun</a>
+      <a href="./resume.html">Resume</a>
+    </header>
 
     <main class="content">
-      <div class="profile-card">
+      <div class="profile-card" data-title="Info">
         <div class="logo">
-          <img src="logo/jake.svg" style="width: 10em" alt="Logo" />
+          <img src="logo/jake.svg" class="profile-logo" alt="Logo" />
         </div>
         <h2 class="tagline">Jacob Trock</h2>
-        <p>Your friendly neighborhood coder.</p>
+        <p>Stewarding the Software and Model lifecycle.</p>
         <div class="social-links">
           <a
             class="social-link swaying-text devicon-github-original"
@@ -51,7 +58,7 @@
           ></a>
           <a
             class="social-link swaying-text devicon-google-plain"
-            href="mailto:jaketrockinquiry@geocrypt.me"
+            href="mailto:jacobsamueltrock@gmail.com"
           ></a>
           <a
             class="social-link swaying-text devicon-linkedin-plain"
@@ -61,11 +68,11 @@
         <hr />
       </div>
 
-      <div class="body-card">
+      <div class="body-card" data-title="Welcome">
         
         <p>
-          <b>I'm Jacob Trock</b>, a graduate of Northeastern
-          University, with a degree in computer science and in business, and am currently the founding engineer at <a class="nav-link" href="https://osmosis.ai">osmosis</a>. 
+        <b>I'm Jacob Trock</b> the founding engineer at <a class="nav-link" href="https://osmosis.ai">osmosis</a>.
+        When I'm not programming I like to cook up creations both electronic and culinary to sate my love of what comes after "what if.."
         </p>
 
         <blockquote class="quote">
@@ -76,41 +83,6 @@
         </blockquote>
 
         <p>Feel free to reach out. I enjoy a good conversation.</p>
-
-          <a
-            href="./inkscape/index.html"
-            class="nav-link"
-            target="_blank"
-            rel="noopener noreferrer"
-          >inkscape web</a>
-          <br/>
-          <a
-            href="./lingread/index.html"
-            class="nav-link"
-            target="_blank"
-            rel="noopener noreferrer"
-          >Lingread &lt;speedreader&gt;</a>
-          <br/>
-          <a
-            href="./read4/index.html"
-            class="nav-link"
-            target="_blank"
-            rel="noopener noreferrer"
-          >Read4 &lt;an (arguably inferior) audio speedreader&gt;</a>
-          <br/>
-          <a
-            href="./menace/index.html"
-            class="nav-link"
-            target="_blank"
-            rel="noopener noreferrer"
-          >MENACE &lt;matchbox noughts &amp; crosses engine&gt;</a>
-
-        <!-- 
-        Sneaky, you are...
-        <div class="resume-links">
-          <a href="./resume/resume.pdf" class="resume-button swaying-text tagline">Resume &lt;pdf&gt;</a>
-          <a href="./resume/resume.docx" class="resume-button swaying-text tagline">Resume &lt;docx&gt;</a>
-        </div> -->
       </div>
     </main>
 

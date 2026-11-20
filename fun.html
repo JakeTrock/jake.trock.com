@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="logo/logo.png" type="image/png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Jacob Trock's fun projects — Inkscape Web, Lingread, Read4, and MENACE." />
+    <title>Fun - Jacob Trock's Site</title>
+    <script>
+      (() => {
+        let last = 0;
+        const spawn = (e) => {
+          const now = Date.now();
+          if (now - last < 35 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+          last = now;
+          const p = e.touches ? e.touches[0] : e;
+          if (!p || !document.body) return;
+          const el = document.createElement("i");
+          el.className = "pepper";
+          el.style.left = p.clientX + "px";
+          el.style.top = p.clientY + "px";
+          el.onanimationend = () => el.remove();
+          document.body.appendChild(el);
+        };
+        ["pointerdown", "pointermove", "touchmove"].forEach((ev) =>
+          window.addEventListener(ev, spawn, { passive: true })
+        );
+      })();
+    </script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.14.0/devicon.min.css"
+      defer
+    />
+    <link
+      rel="stylesheet"
+      href="main.css?v=14"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <a href="./index.html"><img src="logo/logo.svg" class="header-logo" alt="Home" /></a>
+      <a href="./fun.html">Fun</a>
+      <a href="./resume.html">Resume</a>
+    </header>
+
+    <main class="content">
+      <div class="profile-card" data-title="Info">
+        <div class="logo">
+          <img src="logo/jake.svg" class="profile-logo" alt="Logo" />
+        </div>
+        <h2 class="tagline">Jacob Trock</h2>
+        <p>Stewarding the Software and Model lifecycle.</p>
+        <div class="social-links">
+          <a
+            class="social-link swaying-text devicon-github-original"
+            href="https://github.com/jaketrock"
+          ></a>
+          <a
+            class="social-link swaying-text devicon-google-plain"
+            href="mailto:jacobsamueltrock@gmail.com"
+          ></a>
+          <a
+            class="social-link swaying-text devicon-linkedin-plain"
+            href="https://www.linkedin.com/in/jake-trock/"
+          ></a>
+        </div>
+        <hr />
+      </div>
+
+      <div class="body-card" data-title="Fun">
+        <h2 class="tagline">Fun</h2>
+        <ul class="fun-list">
+          <li>
+            <a
+              href="./inkscape/index.html"
+              class="nav-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >Inkscape Web</a>
+            — full desktop Inkscape 1.4.4 vector editor ported to WebAssembly (Emscripten + GTK3 Broadway).
+          </li>
+          <li>
+            <a
+              href="./lingread/index.html"
+              class="nav-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >Lingread</a>
+            — focal-point RSVP speedreader for EPUBs, PDFs, and text.
+          </li>
+          <li>
+            <a
+              href="./read4/index.html"
+              class="nav-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >Read4</a>
+            — an (arguably inferior) in-browser neural TTS audio speedreader.
+          </li>
+          <li>
+            <a
+              href="./menace/index.html"
+              class="nav-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >MENACE</a>
+            — interactive simulation of Donald Michie's 1961 Matchbox Educable Noughts &amp; Crosses Engine (reinforcement learning with 304 matchboxes).
+          </li>
+        </ul>
+      </div>
+    </main>
+
+    <footer class="footer">
+      © <span id="current-year"></span>
+      <a href="#" class="nav-link">Jacob Trock</a>
+    </footer>
+    <script>
+      const currentYear = new Date().getFullYear();
+      document.getElementById("current-year").textContent = currentYear;
+    </script>
+  </body>
+</html>
