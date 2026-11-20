@@ -1,0 +1,16 @@
+fun.html
+  h_2ae8077fa5063a 7,110-118
+simple-notebook/index.html
+  h_2ae8077fa5063a 1-198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "de8e1d32437016d6b2dddd83e2acbc3a263c37f3",
+  "prompts": {},
+  "humans": {
+    "h_2ae8077fa5063a": {
+      "author": "Jacob Trock <jgh@geocrypt.me>"
+    }
+  }
+}
