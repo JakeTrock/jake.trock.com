@@ -1,0 +1,198 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>simple-notebook</title>
+<script src="https://cdn.jsdelivr.net/npm/typescript@5.8.2/lib/typescript.min.js"></script>
+<style>
+  * { box-sizing: border-box; border-radius: 0; font: 13px/1.4 monospace; color: #000; background: #fff; margin: 0; }
+  body { max-width: 820px; margin: 24px auto; padding: 0 16px; }
+  header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 16px; }
+  button { border: 1px solid #000; padding: 3px 8px; cursor: pointer; }
+  button:hover, button:focus-visible { background: #000; color: #fff; outline: none; }
+  .cell { border: 1px solid #000; margin-bottom: 12px; }
+  .bar { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding: 2px 6px; }
+  .bar div { display: flex; gap: 4px; }
+  .bar button { border: none; border-left: 1px solid #000; padding: 0 6px; }
+  textarea { width: 100%; border: none; padding: 8px; resize: vertical; outline: none; display: block; min-height: 68px; }
+  textarea::placeholder { color: transparent; }
+  .cell:first-child textarea::placeholder, .ns { color: #888; }
+  pre { border-top: 1px solid #000; padding: 8px; white-space: pre-wrap; word-break: break-word; }
+  pre:empty { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <strong>simple-notebook (Shift+Enter: run | Shift+Space: new cell | Shift+Backspace: delete)</strong>
+  <div>
+    <button onclick="runAll()">Run All</button>
+    <button onclick="addCell()">+ Cell</button>
+  </div>
+</header>
+<main id="cells"></main>
+
+<script>
+let step = 0;
+const cells = document.getElementById('cells');
+const fmt = (v) => typeof v === 'string' ? v : (v && typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v));
+const ids = (n) => !n ? [] : ts.isIdentifier(n) ? [n.text] : (n.elements || []).flatMap(e => ids(e.name));
+
+// shortcut: globals live on window, upgrade to a dedicated iframe sandbox if isolation from DOM globals is needed
+function compile(code) {
+  if (!window.ts) return code;
+  const js = ts.transpile(code, { target: 99 });
+  const sf = ts.createSourceFile('c.js', js, 99, true);
+  const vars = sf.statements.flatMap(s =>
+    ts.isVariableStatement(s) ? s.declarationList.declarations.flatMap(d => ids(d.name)) :
+    (ts.isFunctionDeclaration(s) || ts.isClassDeclaration(s) || ts.isEnumDeclaration(s)) && s.name ? [s.name.text] : []
+  );
+  const sync = vars.length ? `\nObject.assign(window,{${[...new Set(vars)].join(',')}});\n` : '\n';
+  const last = sf.statements.at(-1);
+  if (!last || !ts.isExpressionStatement(last)) return js + sync;
+  return js.slice(0, last.getStart(sf)) + `\nconst __r = (\n${last.expression.getText(sf)}\n);` + sync + `return __r;`;
+}
+
+// shortcut: rule-based regex formatter ignores AST context, upgrade to prettier/ts language service if full AST formatting is needed
+function format(code) {
+  const slots = [];
+  const mask = (s) => s.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\/.*|\/\*[\s\S]*?\*\//g, m => `\x00${slots.push(m) - 1}\x00`);
+  const unmask = (s) => s.replace(/\x00(\d+)\x00/g, (_, i) => slots[i]);
+  let depth = 0;
+  return mask(code).split('\n').map(raw => {
+    let l = raw.trim()
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\s*([,;])\s*/g, '$1 ')
+      .replace(/\s*:\s*/g, ': ')
+      .replace(/(\w)\s*\?:\s*/g, '$1?: ')
+      .replace(/([^\s?])\?(?![.?:\s])([^:;{}]+):\s*/g, '$1 ? $2 : ')
+      .replace(/\?\s+([^:;{}]+?)\s*:\s*/g, '? $1 : ')
+      .replace(/\s*(===|!==|=>|==|!=|<=|>=|&&|\|\||\?\?|[+\-*/%]=|(?<![=!<>+\-*/%&|^])=(?![=>]))\s*/g, ' $1 ')
+      .replace(/\b(if|for|while|switch|catch)\s*\(/g, '$1 (')
+      .replace(/([^\s{(\[])\{/g, '$1 {')
+      .replace(/\{(?=[^}{\s])/g, '{ ')
+      .replace(/([^}{\s])\}/g, '$1 }')
+      .replace(/\s+([,;)])/g, '$1')
+      .trim();
+    const close = (l.match(/^[}\])]+/) || [''])[0].length;
+    const pad = '  '.repeat(Math.max(0, depth - close));
+    depth = Math.max(0, depth + (l.match(/[{\[(]/g) || []).length - (l.match(/[}\])]/g) || []).length);
+    return l ? pad + unmask(l) : '';
+  }).join('\n').replace(/\n{3,}/g, '\n\n');
+}
+
+async function runCell(el) {
+  const ta = el.querySelector('textarea');
+  if (ta.value.trim()) {
+    ta.value = format(ta.value);
+    fit(ta);
+  }
+  const out = el.querySelector('pre');
+  const tag = el.querySelector('.tag');
+  const time = el.querySelector('.ns');
+  const logs = [];
+  const orig = { log: console.log, warn: console.warn, error: console.error };
+  console.log = console.warn = console.error = (...a) => logs.push(a.map(fmt).join(' '));
+  tag.textContent = '[*]';
+  time.textContent = '';
+  let t0 = performance.now();
+  try {
+    const fn = new (Object.getPrototypeOf(async function(){}).constructor)(compile(ta.value));
+    t0 = performance.now();
+    const res = await fn();
+    if (res !== undefined) logs.push('=> ' + fmt(res));
+    out.textContent = logs.join('\n');
+  } catch (e) {
+    out.textContent = [...logs, String(e.stack || e)].join('\n');
+  } finally {
+    time.textContent = `${(performance.now() - t0).toFixed(2)} ms`;
+    Object.assign(console, orig);
+    tag.textContent = `[${++step}]`;
+    save();
+  }
+}
+
+const KEY = 'jsts_nb_v2';
+const EXAMPLE = `type Point = { x: number; y: number };\nconst p: Point = { x: 3, y: 4 };\nMath.hypot(p.x, p.y)`;
+const save = () => localStorage.setItem(KEY, JSON.stringify({
+  step,
+  cells: [...cells.children].map(el => ({
+    code: el.querySelector('textarea').value,
+    out: el.querySelector('pre').textContent,
+    tag: el.querySelector('.tag').textContent,
+    ns: el.querySelector('.ns').textContent
+  }))
+}));
+
+function fit(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 2 + 'px';
+}
+
+function addCell(c = '', after = null) {
+  const { code = '', out = '', tag = '[ ]', ns = '' } = typeof c === 'string' ? { code: c } : c;
+  const el = document.createElement('section');
+  el.className = 'cell';
+  el.innerHTML = `<div class="bar"><span><span class="tag"></span> <span class="ns"></span></span><div><button class="run">Run (shft+ent)</button><button class="add">+</button><button class="del">×</button></div></div><textarea spellcheck="false"></textarea><pre></pre>`;
+  const ta = el.querySelector('textarea');
+  ta.placeholder = EXAMPLE;
+  ta.value = code;
+  el.querySelector('.tag').textContent = tag;
+  el.querySelector('.ns').textContent = ns;
+  el.querySelector('pre').textContent = out;
+  const del = () => {
+    if (cells.children.length > 1) {
+      (el.previousElementSibling || el.nextElementSibling)?.querySelector('textarea').focus();
+      el.remove();
+      save();
+    }
+  };
+  ta.addEventListener('input', () => { fit(ta); save(); });
+  ta.addEventListener('blur', () => {
+    if (ta.value.trim()) {
+      ta.value = format(ta.value);
+      fit(ta);
+      save();
+    }
+  });
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end');
+      save();
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const line = ta.value.slice(0, ta.selectionStart).split('\n').at(-1);
+      const pad = (line.match(/^\s*/) || [''])[0] + (/[{\[(]\s*$/.test(line) ? '  ' : '');
+      ta.setRangeText('\n' + pad, ta.selectionStart, ta.selectionEnd, 'end');
+      fit(ta);
+      save();
+    } else if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault();
+      runCell(el);
+    } else if (e.key === ' ' && e.shiftKey) {
+      e.preventDefault();
+      addCell('', el).querySelector('textarea').focus();
+    } else if (e.key === 'Backspace' && e.shiftKey) {
+      e.preventDefault();
+      del();
+    }
+  });
+  el.querySelector('.run').onclick = () => runCell(el);
+  el.querySelector('.add').onclick = () => addCell('', el).querySelector('textarea').focus();
+  el.querySelector('.del').onclick = del;
+  after ? after.after(el) : cells.append(el);
+  fit(ta);
+  save();
+  return el;
+}
+
+async function runAll() {
+  for (const el of cells.children) await runCell(el);
+}
+
+const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+step = saved?.step || 0;
+(saved?.cells?.length ? saved.cells : ['']).forEach(c => addCell(c));
+</script>
+</body>
+</html>
