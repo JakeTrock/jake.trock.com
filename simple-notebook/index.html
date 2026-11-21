@@ -14,9 +14,18 @@
   .bar { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding: 2px 6px; }
   .bar div { display: flex; gap: 4px; }
   .bar button { border: none; border-left: 1px solid #000; padding: 0 6px; }
-  textarea { width: 100%; border: none; padding: 8px; resize: vertical; outline: none; display: block; min-height: 68px; }
+  .ed { display: flex; }
+  .gutter { padding: 8px 4px; border-right: 1px solid #000; text-align: right; color: #888; user-select: none; min-width: 28px; }
+  .gutter div { padding: 0 3px; }
+  .gutter .bad { background: #000; color: #fff; }
+  .wrap { position: relative; flex: 1; overflow: hidden; }
+  .hl, textarea { width: 100%; border: none; padding: 8px; white-space: pre; overflow-x: auto; display: block; min-height: 68px; background: transparent; }
+  .hl { position: absolute; inset: 0; pointer-events: none; color: transparent; overflow: hidden; }
+  .hl mark { background: #e0e0e0; color: transparent; border-bottom: 2px solid #000; }
+  textarea { position: relative; resize: vertical; outline: none; }
   textarea::placeholder { color: transparent; }
   .cell:first-child textarea::placeholder, .ns { color: #888; }
+  .err { color: #000; border-bottom: 1px dashed #000; }
   pre { border-top: 1px solid #000; padding: 8px; white-space: pre-wrap; word-break: break-word; }
   pre:empty { display: none; }
 </style>
@@ -80,12 +89,40 @@ function format(code) {
   }).join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+function inspect(code) {
+  if (!code.trim() || !window.ts) return { html: esc(code), errLines: new Set(), msg: '' };
+  const { diagnostics } = ts.transpileModule(code, { compilerOptions: { target: 99, module: 99 }, reportDiagnostics: true });
+  const errLines = new Set();
+  const ranges = [];
+  for (const d of diagnostics) {
+    if (d.start === undefined) continue;
+    errLines.add(code.slice(0, d.start).split('\n').length);
+    let s = d.start, e = d.start + (d.length || 0);
+    if (e <= s || code.slice(s, e) === '\n') { s = Math.max(0, s - 1); e = Math.min(code.length, s + 1); }
+    ranges.push([s, e]);
+  }
+  ranges.sort((a, b) => a[0] - b[0]);
+  let html = '', pos = 0;
+  for (const [s, e] of ranges) {
+    if (e <= pos) continue;
+    const start = Math.max(s, pos);
+    html += esc(code.slice(pos, start)) + '<mark>' + (esc(code.slice(start, e)) || ' ') + '</mark>';
+    pos = e;
+  }
+  html += esc(code.slice(pos));
+  const d0 = diagnostics[0];
+  const msg = d0 ? `Ln ${code.slice(0, d0.start || 0).split('\n').length}: ${ts.flattenDiagnosticMessageText(d0.messageText, ' ')}` : '';
+  return { html, errLines, msg };
+}
+
 async function runCell(el) {
   const ta = el.querySelector('textarea');
-  if (ta.value.trim()) {
+  if (ta.value.trim() && !inspect(ta.value).msg) {
     ta.value = format(ta.value);
-    fit(ta);
   }
+  sync(el);
   const out = el.querySelector('pre');
   const tag = el.querySelector('.tag');
   const time = el.querySelector('.ns');
@@ -96,6 +133,8 @@ async function runCell(el) {
   time.textContent = '';
   let t0 = performance.now();
   try {
+    const info = inspect(ta.value);
+    if (info.msg) throw new SyntaxError(info.msg);
     const fn = new (Object.getPrototypeOf(async function(){}).constructor)(compile(ta.value));
     t0 = performance.now();
     const res = await fn();
@@ -123,7 +162,18 @@ const save = () => localStorage.setItem(KEY, JSON.stringify({
   }))
 }));
 
-function fit(ta) {
+function sync(el) {
+  const ta = el.querySelector('textarea');
+  const hl = el.querySelector('.hl');
+  const gut = el.querySelector('.gutter');
+  const err = el.querySelector('.err');
+  const info = inspect(ta.value);
+  hl.innerHTML = info.html + '\n';
+  err.textContent = info.msg;
+  const count = Math.max(ta.value ? ta.value.split('\n').length : (el === cells.firstElementChild ? 3 : 1), 1);
+  gut.innerHTML = Array.from({ length: count }, (_, i) =>
+    `<div class="${info.errLines.has(i + 1) ? 'bad' : ''}">${i + 1}</div>`
+  ).join('');
   ta.style.height = 'auto';
   ta.style.height = ta.scrollHeight + 2 + 'px';
 }
@@ -132,8 +182,9 @@ function addCell(c = '', after = null) {
   const { code = '', out = '', tag = '[ ]', ns = '' } = typeof c === 'string' ? { code: c } : c;
   const el = document.createElement('section');
   el.className = 'cell';
-  el.innerHTML = `<div class="bar"><span><span class="tag"></span> <span class="ns"></span></span><div><button class="run">Run (shft+ent)</button><button class="add">+</button><button class="del">×</button></div></div><textarea spellcheck="false"></textarea><pre></pre>`;
+  el.innerHTML = `<div class="bar"><span><span class="tag"></span> <span class="ns"></span> <span class="err"></span></span><div><button class="run">Run (shft+ent)</button><button class="add">+</button><button class="del">×</button></div></div><div class="ed"><div class="gutter"></div><div class="wrap"><div class="hl"></div><textarea spellcheck="false"></textarea></div></div><pre></pre>`;
   const ta = el.querySelector('textarea');
+  const hl = el.querySelector('.hl');
   ta.placeholder = EXAMPLE;
   ta.value = code;
   el.querySelector('.tag').textContent = tag;
@@ -143,14 +194,16 @@ function addCell(c = '', after = null) {
     if (cells.children.length > 1) {
       (el.previousElementSibling || el.nextElementSibling)?.querySelector('textarea').focus();
       el.remove();
+      if (cells.firstElementChild) sync(cells.firstElementChild);
       save();
     }
   };
-  ta.addEventListener('input', () => { fit(ta); save(); });
+  ta.addEventListener('scroll', () => { hl.scrollLeft = ta.scrollLeft; hl.scrollTop = ta.scrollTop; });
+  ta.addEventListener('input', () => { sync(el); save(); });
   ta.addEventListener('blur', () => {
-    if (ta.value.trim()) {
+    if (ta.value.trim() && !inspect(ta.value).msg) {
       ta.value = format(ta.value);
-      fit(ta);
+      sync(el);
       save();
     }
   });
@@ -158,13 +211,14 @@ function addCell(c = '', after = null) {
     if (e.key === 'Tab') {
       e.preventDefault();
       ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end');
+      sync(el);
       save();
     } else if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       const line = ta.value.slice(0, ta.selectionStart).split('\n').at(-1);
       const pad = (line.match(/^\s*/) || [''])[0] + (/[{\[(]\s*$/.test(line) ? '  ' : '');
       ta.setRangeText('\n' + pad, ta.selectionStart, ta.selectionEnd, 'end');
-      fit(ta);
+      sync(el);
       save();
     } else if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
@@ -181,7 +235,7 @@ function addCell(c = '', after = null) {
   el.querySelector('.add').onclick = () => addCell('', el).querySelector('textarea').focus();
   el.querySelector('.del').onclick = del;
   after ? after.after(el) : cells.append(el);
-  fit(ta);
+  sync(el);
   save();
   return el;
 }
